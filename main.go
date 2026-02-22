@@ -164,7 +164,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			}
 			return m, nil
+
+		case "ctrl+d":
+			selectedItem, ok := m.fileList.SelectedItem().(item)
+			if ok {
+				filePath := fmt.Sprintf("%s/%s", vaultDirectory, selectedItem.title)
+				if err := os.Remove(filePath); err != nil {
+					log.Fatalf("%v", err)
+				}
+			}
+			noteList := listFiles()
+			m.fileList.SetItems(noteList)
+			return m, nil
 		}
+
 	}
 	if m.createFileInputVisible {
 		m.newFileInput, cmd = m.newFileInput.Update(msg)
@@ -191,7 +204,7 @@ func (m model) View() string {
 		Padding(0, 2)
 
 	welcome := style.Render("Welcome to Hackpad!")
-	help := "Ctrl+N: New Note | Ctrl+L: List | Esc: back | Ctrl+S: save | Ctrl+Q: quit"
+	help := "Ctrl+N: New Note | Ctrl+L: List | Esc: back | Ctrl+S: save | Ctrl+Q: quit | Ctrl+D: delete (in list view)"
 	view := ""
 	if m.createFileInputVisible {
 		view = m.newFileInput.View()
