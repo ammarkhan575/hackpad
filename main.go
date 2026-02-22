@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,11 +17,22 @@ type model struct {
 	createFileInputVisible bool
 	file                   *os.File
 	noteTextArea           textarea.Model
+	fileList               list.Model
+	showingList            bool
 }
+
+type item struct {
+	title, desc string
+}
+
+func (i item) Title() string       { return i.title }
+func (i item) Description() string { return i.desc }
+func (i item) FilterValue() string { return i.title }
 
 var (
 	vaultDirectory string
 	cursorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4"))
+	docStyle       = lipgloss.NewStyle().Margin(1, 2)
 )
 
 // Init initializes the model and returns an initial command.
@@ -33,6 +45,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 
+	case tea.WindowSizeMsg:
+		h, v := docStyle.GetFrameSize()
+		m.noteTextArea.SetWidth(msg.Width - h)
+		m.noteTextArea.SetHeight(msg.Height - v - 5)
+		m.fileList.SetWidth(msg.Width - h)
+		m.fileList.SetHeight(msg.Height - v - 5)
+		return m, nil
+
 	// Is it a key press?
 	case tea.KeyMsg:
 
@@ -42,6 +62,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// These keys should exit the program.
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "ctrl+l":
+			m.showingList = true
+			return m, nil
 
 		case "ctrl+n":
 			m.createFileInputVisible = true
@@ -78,7 +102,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// we can just break out of the switch statement and let the user start writing in the text area
 			// allow to writing in new line when the file is already created
 			if m.file != nil {
-				break;
+				break
 			}
 			// create a file with the name in the input
 			m.createFileInputVisible = false
@@ -108,6 +132,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.noteTextArea, cmd = m.noteTextArea.Update(msg)
 	}
 
+	if m.showingList {
+		m.fileList, cmd = m.fileList.Update(msg)
+	}
+
 	// Return the updated model to the Bubble Tea runtime for processing.
 	// Note that we're not returning a command.
 	return m, cmd
@@ -131,6 +159,9 @@ func (m model) View() string {
 		view = m.noteTextArea.View()
 	}
 
+	if m.showingList {
+		view = m.fileList.View()
+	}
 	return fmt.Sprintf("\n%s\n\n%s\n\n%s", welcome, view, help)
 }
 
@@ -156,10 +187,16 @@ func initializeModel() model {
 	ta.CharLimit = 10000
 	ta.Cursor.Style = cursorStyle
 
+	// file list
+	noteList := listFiles()
+	finalList := list.New(noteList, list.NewDefaultDelegate(), 0, 0)
+	finalList.Title = "Your Notes"
+
 	return model{
 		newFileInput:           ti,
 		createFileInputVisible: false,
 		noteTextArea:           ta,
+		fileList: 				finalList,
 	}
 }
 
@@ -180,4 +217,23 @@ func main() {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
 	}
+}
+
+func listFiles() []list.Item {
+	items := make([]list.Item, 0)
+	entries, err := os.ReadDir(vaultDirectory)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, file := range entries {
+		if !file.IsDir() {
+			if info, err := file.Info(); err == nil {
+				items = append(items, item{
+					title: file.Name(),
+					desc:  fmt.Sprintf("Last edited: %s", info.ModTime().Format("Jan 2, 2006 at 3:04pm")),
+				})
+			}
+		}
+	}
+	return items
 }
