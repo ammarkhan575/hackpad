@@ -60,10 +60,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		// These keys should exit the program.
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return m, tea.Quit
 
 		case "ctrl+l":
+			noteList := listFiles()
+			m.fileList.SetItems(noteList)
 			m.showingList = true
 			return m, nil
 
@@ -103,6 +105,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// allow to writing in new line when the file is already created
 			if m.file != nil {
 				break
+			}
+
+			if m.showingList {
+				// we are typecasting the selected item to our custom item type so that we can access the title and description of the file
+				selectedItem, ok := m.fileList.SelectedItem().(item)
+				if ok {
+					filePath := fmt.Sprintf("%s/%s", vaultDirectory, selectedItem.title)
+					content, err := os.ReadFile(filePath)
+					if err != nil {
+						log.Fatalf("%v", err)
+						return m, nil
+					}
+					m.noteTextArea.SetValue(string(content))
+					f, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+					if err != nil {
+						log.Fatalf("%v", err)
+						return m, nil
+					}
+					m.file = f
+					m.showingList = false
+				}
+				return m, nil
 			}
 			// create a file with the name in the input
 			m.createFileInputVisible = false
