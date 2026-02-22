@@ -1,0 +1,7 @@
+# Build artifacts
+hackpad
+hackpad.exe
+
+# Go build cache
+*.test
+*.out
