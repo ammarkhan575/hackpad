@@ -60,8 +60,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		// These keys should exit the program.
-		case "ctrl+c":
+		case "ctrl+q":
 			return m, tea.Quit
+
+		case "esc":
+			if m.showingList {
+				m.showingList = false
+				return m, nil
+			}
+
+			if m.file != nil {
+				m.file = nil
+				m.noteTextArea.SetValue("")
+				return m, nil
+			}
+
+			if m.showingList {
+				if m.fileList.FilterState() == list.Filtering {
+					break
+				}
+			}
 
 		case "ctrl+l":
 			noteList := listFiles()
@@ -173,7 +191,7 @@ func (m model) View() string {
 		Padding(0, 2)
 
 	welcome := style.Render("Welcome to Hackpad!")
-	help := "Ctrl+N: New Note | Ctrl+L: List | Esc: back/save | Ctrl+S: save | Ctrl+Q: quit"
+	help := "Ctrl+N: New Note | Ctrl+L: List | Esc: back | Ctrl+S: save | Ctrl+Q: quit"
 	view := ""
 	if m.createFileInputVisible {
 		view = m.newFileInput.View()
@@ -220,7 +238,7 @@ func initializeModel() model {
 		newFileInput:           ti,
 		createFileInputVisible: false,
 		noteTextArea:           ta,
-		fileList: 				finalList,
+		fileList:               finalList,
 	}
 }
 
