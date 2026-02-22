@@ -5,6 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type model struct {
@@ -40,7 +41,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	return m.msg
+	var style = lipgloss.NewStyle().
+    Bold(true).
+    Foreground(lipgloss.Color("#FAFAFA")).
+    Background(lipgloss.Color("#7D56F4")).
+	Padding(0, 2)
+
+	welcome := style.Render("Welcome to Hackpad!")
+	view := ""
+	help := "Ctrl+N: New Note | Ctrl+L: List | Esc: back/save | Ctrl+S: save | Ctrl+Q: quit"
+
+	return fmt.Sprintf("\n%s\n\n%s\n\n%s", welcome, view, help)
 }
 
 func initialModel() model {
